@@ -1,31 +1,30 @@
-
-import { 
-  IonInputCustomEvent, InputChangeEventDetail,
-  IonSelectCustomEvent, SelectChangeEventDetail
+import {
+  type IonInputCustomEvent, type InputChangeEventDetail,
+  type IonSelectCustomEvent, type SelectChangeEventDetail
 } from '@ionic/core'
 
 import React, { useState } from 'react'
 import { Redirect, Route } from 'react-router'
-import { 
+import {
   IonContent, IonHeader, IonTitle, IonToolbar,
   IonLabel,
   IonList, IonItem, IonSelect,
   IonPage, IonButtons, IonButton, IonListHeader, IonSelectOption, IonItemGroup, IonItemDivider, IonInput, IonFooter, IonProgressBar, IonFab, IonFabButton, IonIcon
-} from '@ionic/react';
+} from '@ionic/react'
 
-import { play, stop } from 'ionicons/icons';
+import { play, stop } from 'ionicons/icons'
 
 import Devices from '../components/Devices'
-import './Home.css';
+import './Home.css'
 
 const electrodeLabels = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
-const electrodeAmps = [15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0,-1,-2,-3,-4,-5,-6,-7,-8,-9,-10,-11,-12,-13,-14,-15]
+const electrodeAmps = [15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, -1, -2, -3, -4, -5, -6, -7, -8, -9, -10, -11, -12, -13, -14, -15]
 
 const timingLabels = ['period', 'pulse', 'hold', 'recycle']
 
 const Home: React.FC = () => {
-  const [electrodeConfig, setElectrodeConfig] = useState<number[]>([0,0,0,0,0,0,0,0])
-  const [timingConfig, setTimingConfig] = useState<(number | null)[]>([0,0,0,0])
+  const [electrodeConfig, setElectrodeConfig] = useState<number[]>([0, 0, 0, 0, 0, 0, 0, 0])
+  const [timingConfig, setTimingConfig] = useState<Array<number | null>>([0, 0, 0, 0])
 
   return (
     <IonPage>
@@ -46,18 +45,18 @@ const Home: React.FC = () => {
 
             { electrodeLabels.map((label, index) => (
               <IonItem key={`electrode-${label}`}>
-                <IonSelect 
-                  label={label} 
+                <IonSelect
+                  label={label}
                   value={electrodeConfig[index]}
                   interface='popover'
-                  onIonChange={(e: IonSelectCustomEvent<SelectChangeEventDetail>) => setElectrodeConfig([...electrodeConfig.slice(0, index), e.detail.value, ...electrodeConfig.slice(index + 1)])}
+                  onIonChange={(e: IonSelectCustomEvent<SelectChangeEventDetail>) => { setElectrodeConfig([...electrodeConfig.slice(0, index), e.detail.value, ...electrodeConfig.slice(index + 1)]) }}
                 >
                   { electrodeAmps.map(num => <IonSelectOption key={`electrode-${label}-opt-${num}`} value={num}>{`${num} mA`}</IonSelectOption>) }
                 </IonSelect>
               </IonItem>
             ))}
           </IonItemGroup>
-          
+
           <IonItemGroup>
             <IonItemDivider>
               <IonLabel>Timing</IonLabel>
@@ -65,11 +64,11 @@ const Home: React.FC = () => {
 
             { timingLabels.map((label, index) => (
               <IonItem key={`timing-${label}`}>
-                <IonLabel position='fixed'>{label.slice(0,1).toUpperCase() + label.slice(1)}</IonLabel>
-                <IonInput 
-                  class='ion-input-us' 
-                  style={{ textAlign: 'right' }} 
-                  value={timingConfig[index]} 
+                <IonLabel position='fixed'>{label.slice(0, 1).toUpperCase() + label.slice(1)}</IonLabel>
+                <IonInput
+                  class='ion-input-us'
+                  style={{ textAlign: 'right' }}
+                  value={timingConfig[index]}
                   onIonInput={(e: IonInputCustomEvent<InputChangeEventDetail>) => {
                     let update
                     const str = e.detail.value
@@ -85,7 +84,7 @@ const Home: React.FC = () => {
                       }
                     }
                     setTimingConfig(update)
-                  }} 
+                  }}
                 />
               </IonItem>
             ))}
@@ -110,7 +109,7 @@ const Home: React.FC = () => {
         </IonToolbar>
       </IonFooter>
     </IonPage>
-  );
-};
+  )
+}
 
-export default Home;
+export default Home

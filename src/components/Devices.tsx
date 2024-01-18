@@ -1,11 +1,11 @@
-
+import React from 'react'
 import {
   IonPage, IonHeader, IonToolbar, IonButtons, IonMenuButton, IonTitle
 } from '@ionic/react'
-import './Devices.css';
+import './Devices.css'
 
 interface DevicesProps {
-  
+
 }
 
 const Devices: React.FC<DevicesProps> = () => {
@@ -20,7 +20,7 @@ const Devices: React.FC<DevicesProps> = () => {
         </IonToolbar>
       </IonHeader>
     </IonPage>
-  );
-};
+  )
+}
 
-export default Devices;
+export default Devices
