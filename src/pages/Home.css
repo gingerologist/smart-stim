@@ -1,0 +1,10 @@
+
+.ion-input-us::after {
+  content: "us";
+  padding-left: 0.5em;
+}
+
+ion-item {
+  --min-height: 12px;
+}
+

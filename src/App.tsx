@@ -22,7 +22,12 @@ import '@ionic/react/css/display.css';
 /* Theme variables */
 import './theme/variables.css';
 
+import { menuController } from '@ionic/core/components'
+import { BleClient } from '@capacitor-community/bluetooth-le'
+
 setupIonicReact();
+
+await BleClient.initialize({ androidNeverForLocation: true })
 
 const App: React.FC = () => (
   <IonApp>
