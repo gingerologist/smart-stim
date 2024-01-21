@@ -155,7 +155,7 @@ const App: React.FC = () => {
             <Home dispatch={ dispatch } />
           </Route>
           <Route exact path='/devices'>
-            <Devices scanned={scanned} dispatch={ dispatch }/>
+            <Devices />
           </Route>
           <Route exact path='/'>
             <Redirect to='/home' />
