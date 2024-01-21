@@ -24,18 +24,23 @@ import '@ionic/react/css/display.css'
 /* Theme variables */
 import './theme/variables.css'
 
-import { AppActionEnum, type AppAction, type ScannedDevice } from './types/appTypes'
+import { type AppAction, type ScannedDevice, type SelectedDevice } from './types/appTypes'
 
 import Home from './pages/Home'
 import Devices from './pages/Devices'
 
 // import { menuController } from '@ionic/core/components'
 
-/**
- * putting ble module in this coomponent because this
- * is the top module for useReducer
- */
-await BleClient.initialize({ androidNeverForLocation: true })
+async function bleInit (): Promise<void> {
+  await BleClient.initialize({ androidNeverForLocation: true })
+  const devices = await BleClient.getConnectedDevices([])
+  for (const d of devices.filter(({ name }) => name === 'HowlandStim')) {
+    console.log(`disconnecting ${d.deviceId}`)
+    await BleClient.disconnect(d.deviceId)
+  }
+}
+
+await bleInit()
 
 setupIonicReact()
 
@@ -54,23 +59,23 @@ interface AppState {
 function reducer (state: AppState, action: AppAction): AppState {
   const { scan, scanned } = state
   switch (action.type) {
-    case AppActionEnum.START_SCAN :
+    case 'START_SCAN':
       if (scan !== ScanStateEnum.STOPPED) {
         return state
       } else {
         return { ...state, scan: ScanStateEnum.STARTING, scanned: [] }
       }
-    case AppActionEnum.SCAN_STARTED:
+    case 'SCAN_STARTED':
       return { ...state, scan: ScanStateEnum.STARTED }
-    case AppActionEnum.STOP_SCAN:
+    case 'STOP_SCAN':
       if (scan !== ScanStateEnum.STARTED) {
         return state
       } else {
         return { ...state, scan: ScanStateEnum.STOPPING }
       }
-    case AppActionEnum.SCAN_STOPPED:
+    case 'SCAN_STOPPED':
       return { ...state, scan: ScanStateEnum.STOPPED }
-    case AppActionEnum.SCAN_RESULT:
+    case 'SCAN_RESULT':
       if (scan !== ScanStateEnum.STARTED) {
         return state
       } else {
@@ -105,7 +110,7 @@ function reducer (state: AppState, action: AppAction): AppState {
  * (nullable) selected device is persistent to all view, though it may not be connected. it is only set in scan view.
  * connect: connecting (scan view), connected (both), disconnecting (scan view), disconnected (both)
  *
- * 
+ *
  */
 
 const initState = {
@@ -122,19 +127,19 @@ const App: React.FC = () => {
       case ScanStateEnum.STARTING: {
         BleClient.requestLEScan({ allowDuplicates: true }, result => {
           dispatch({
-            type: AppActionEnum.SCAN_RESULT,
+            type: 'SCAN_RESULT',
             id: result.device.deviceId,
             name: result.device.name,
             rssi: result.rssi
           })
-        }).then(() => { dispatch({ type: AppActionEnum.SCAN_STARTED }) })
-          .catch(() => { dispatch({ type: AppActionEnum.START_SCAN_FAILED }) })
+        }).then(() => { dispatch({ type: 'SCAN_STARTED' }) })
+          .catch(() => { dispatch({ type: 'START_SCAN_FAILED' }) })
         break
       }
       case ScanStateEnum.STOPPING: {
         BleClient.stopLEScan()
-          .then(() => { dispatch({ type: AppActionEnum.SCAN_STOPPED }) })
-          .catch(() => { dispatch({ type: AppActionEnum.STOP_SCAN_FAILED }) })
+          .then(() => { dispatch({ type: 'SCAN_STOPPED' }) })
+          .catch(() => { dispatch({ type: 'STOP_SCAN_FAILED' }) })
         break
       }
       default:

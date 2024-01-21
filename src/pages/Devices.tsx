@@ -1,3 +1,9 @@
+/**
+ * Devices start scan on enter and stop scan on exit.
+ * 
+ * If selected device is connected
+ */
+
 import { BleClient } from '@capacitor-community/bluetooth-le'
 
 import React, { useEffect } from 'react'
@@ -8,7 +14,7 @@ import {
 } from '@ionic/react'
 import './Devices.css'
 
-import { AppActionEnum, type AppAction, type ScannedDevice } from '../types/appTypes'
+import type { AppAction, ScannedDevice } from '../types/appTypes'
 
 interface DevicesProps {
   dispatch: Dispatch<AppAction>
@@ -27,11 +33,11 @@ const Devices: React.FC<DevicesProps> = ({ dispatch, scanned }) => {
   }, [])
 
   useIonViewWillEnter(() => {
-    dispatch({ type: AppActionEnum.START_SCAN })
+    dispatch({ type: 'START_SCAN' })
   })
 
   useIonViewWillLeave(() => {
-    dispatch({ type: AppActionEnum.STOP_SCAN })
+    dispatch({ type: 'STOP_SCAN' })
   })
 
   return (
