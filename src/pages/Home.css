@@ -4,6 +4,11 @@
   padding-left: 0.5em;
 }
 
+ion-input.timing > label > div.native-wrapper::after{
+  content: "us";
+  padding-left: 0.5em;
+}
+
 ion-item {
   --min-height: 12px;
 }

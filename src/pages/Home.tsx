@@ -1,3 +1,6 @@
+import type { Dispatch, FunctionComponent } from 'react'
+import { AppActionEnum, type AppAction } from '../types/appTypes'
+
 import {
   type IonInputCustomEvent, type InputChangeEventDetail,
   type IonSelectCustomEvent, type SelectChangeEventDetail
@@ -14,7 +17,7 @@ import {
 
 import { play, stop } from 'ionicons/icons'
 
-import Devices from '../components/Devices'
+// import Devices from '../components/Devices'
 import './Home.css'
 
 const electrodeLabels = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
@@ -22,7 +25,11 @@ const electrodeAmps = [15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, -1,
 
 const timingLabels = ['period', 'pulse', 'hold', 'recycle']
 
-const Home: React.FC = () => {
+interface HomeProps {
+  dispatch: Dispatch<AppAction>
+}
+
+const Home: FunctionComponent<HomeProps> = ({ dispatch }) => {
   const [electrodeConfig, setElectrodeConfig] = useState<number[]>([0, 0, 0, 0, 0, 0, 0, 0])
   const [timingConfig, setTimingConfig] = useState<Array<number | null>>([0, 0, 0, 0])
 
@@ -32,7 +39,7 @@ const Home: React.FC = () => {
         <IonToolbar>
           <IonTitle>Smart Stim</IonTitle>
           <IonButtons slot='end'>
-            <IonButton>Hello</IonButton>
+            <IonButton routerLink='/devices' routerDirection='forward'>SELECT</IonButton>
           </IonButtons>
         </IonToolbar>
       </IonHeader>
@@ -61,6 +68,10 @@ const Home: React.FC = () => {
             <IonItemDivider>
               <IonLabel>Timing</IonLabel>
             </IonItemDivider>
+            <IonItem key='period-input'>
+              {/* <IonLabel>Multiple</IonLabel> */}
+              <IonInput label='hello' class="timing" type='number' style={{ textAlign: 'right' }} value={timingConfig[0]}></IonInput>
+            </IonItem>
 
             { timingLabels.map((label, index) => (
               <IonItem key={`timing-${label}`}>
@@ -89,10 +100,6 @@ const Home: React.FC = () => {
               </IonItem>
             ))}
 
-            {/* <IonItem key='period-input'>
-              <IonLabel>Period</IonLabel>
-              <IonInput class='ion-input-us' type='number' style={{ textAlign: 'right' }} value={timingConfig[0]}></IonInput>
-            </IonItem> */}
           </IonItemGroup>
         </IonList>
       </IonContent>
