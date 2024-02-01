@@ -4,18 +4,18 @@
  * If selected device is connected
  */
 
-import { BleClient } from '@capacitor-community/bluetooth-le'
+import { BleClient, numbersToDataView } from '@capacitor-community/bluetooth-le'
 
 import React, { useEffect, useState, useRef, useReducer } from 'react'
 import type { Dispatch } from 'react'
 import {
   IonPage, IonHeader, IonToolbar, IonButtons, IonBackButton, IonTitle, IonContent,
   useIonViewWillEnter, useIonViewDidEnter, useIonViewWillLeave, useIonViewDidLeave,
-  IonList, IonItem, IonLabel, IonNote, IonBadge
+  IonList, IonItem, IonLabel, IonNote, IonBadge, IonModal, IonAlert, useIonAlert
 } from '@ionic/react'
 import './Devices.css'
 
-import type { AppAction, ScannedDevice } from '../types/appTypes'
+import type { AppAction, ScannedDevice, SelectAction, SelectedDevice } from '../types/appTypes'
 
 interface ScanState {
   state: 'STARTING' | 'STARTED' | 'STOPPED'
@@ -28,10 +28,10 @@ type ScanAction =
   | { type: 'STARTED' }
   | { type: 'RESULT', id: string, name?: string, rssi?: number }
   | { type: 'STOP' }
-
-
+  | { type: 'EXIT' }
 
 const onDisconnect = (id: string): void => {
+  // TODO
   console.log(`${id} disconnected`)
 }
 
@@ -45,10 +45,10 @@ function reducer (scanState: ScanState, action: ScanAction): ScanState {
       return { state: 'STOPPED', devices }
 
     case 'STARTED':
-      return { state: 'STARTED', devices: [] }
+      return { state: 'STARTED', devices }
 
     case 'RESULT': {
-      if (state !== 'STARTED') return scanState
+      // if (state !== 'STARTED') return scanState
       const { id, name, rssi } = action
       const index = devices.findIndex(x => x.id === id)
       if (index < 0) {
@@ -64,20 +64,77 @@ function reducer (scanState: ScanState, action: ScanAction): ScanState {
         }
       }
     }
-    case 'STOP': {
+    case 'STOP':
       return { state: 'STOPPED', devices }
-    }
+    case 'EXIT':
+      return { state: 'STOPPED', devices: [] }
     default:
       return scanState
   }
 }
 
 interface DevicesProps {
-  select?: ScannedDevice
+  selected: SelectedDevice
+  selectDispatch: Dispatch<SelectAction>
 }
 
-const Devices: React.FC<DevicesProps> = ({ select }) => {
+let timer
+
+const delay = async (ms: number) => await new Promise(resolve => setTimeout(resolve, ms))
+
+const BLE_NUS_SVC_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e'
+const BLE_NUS_RXD_UUID = '6e400002-b5a3-f393-e0a9-e50e24dcca9e'
+const BLE_NUS_TXD_UUID = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'
+
+const connect = async (id: string): Promise<void> => {
+  try {
+    await BleClient.connect(id, onDisconnect)
+    for (;;) {
+      const services = await BleClient.getServices(id)
+      if (services.length === 0) {
+        await delay(200)
+        continue
+      }
+
+      const uartSvc = services.find(svc => svc.uuid === BLE_NUS_SVC_UUID)
+      if (uartSvc === undefined) {
+        throw new Error('uart service not found')
+      }
+
+      await BleClient.startNotifications(id, BLE_NUS_SVC_UUID, BLE_NUS_TXD_UUID, notify)
+
+      // const enc = new TextEncoder()
+      // const arr = enc.encode('hello')
+      // const view = new DataView(arr.buffer)
+      // await BleClient.write(id, BLE_NUS_SVC_UUID, BLE_NUS_RXD_UUID, numbersToDataView([0x00]))
+      await BleClient.write(id, BLE_NUS_SVC_UUID, BLE_NUS_RXD_UUID,
+        numbersToDataView([
+          0x02, 0x00,
+          0x00, 0x00,
+          0x01, 0x00,
+          0x32, 0x00,
+          0x00, 0x00,
+          0x00, 0x00,
+          0xc8, 0x00,
+          0x00, 0x00,
+          0x00, 0x00, 0x0A, 0xf6, 0x00, 0x00, 0x00, 0x00
+        ]))
+      break
+      // await BleClient.writeWithoutResponse(id, BLE_NUS_SVC_UUID, BLE_NUS_RXD_UUID, view)
+    }
+  } catch (e) {
+    console.log(e)
+    await BleClient.disconnect(id)
+  }
+}
+
+const notify = dataview => {
+
+}
+
+const Devices: React.FC<DevicesProps> = ({ selected, selectDispatch }) => {
   const [scanState, dispatch] = useReducer(reducer, { state: 'STOPPED', devices: [] })
+  const [presentAlert] = useIonAlert()
 
   useIonViewDidEnter(() => {
     console.log('requestLEScan')
@@ -96,9 +153,65 @@ const Devices: React.FC<DevicesProps> = ({ select }) => {
   useIonViewDidLeave(() => {
     console.log('stopLEScan')
     BleClient.stopLEScan()
-      .then(() => { dispatch({ type: 'STOP' }) })
-      .catch(e => { dispatch({ type: 'STOP' }) })
+      .then(() => { dispatch({ type: 'EXIT' }) })
+      .catch(e => { dispatch({ type: 'EXIT' }) })
+
+    clearInterval(timer)
   })
+
+  useEffect(() => {
+    if (selected?.connect === 'CONNECTED') {
+      dispatch({ type: 'RESULT', id: selected.id, name: 'HowlandStim' })
+    }
+  }, [])
+
+  useEffect(() => {
+    if (selected?.connect === 'CONNECTING') {
+      // BleClient.connect(selected.id, onDisconnect)
+      //   .then(() => {
+      //     console.log(`${selected.id} connected`)
+      //     BleClient.getServices(selected.id)
+      //       .then(services => {
+      //         console.log('services', services)
+      //         selectDispatch({ type: 'CONNECTED' })
+      //       })
+      //       .catch(e => {
+      //         console.log(`${selected.id} getServices() failed`)
+      //         selectDispatch({ type: 'CONNECT_FAILED' })
+      //       })
+      //   })
+      //   .catch(e => {
+      //     console.log(`${selected.id} connect failed`)
+      //     selectDispatch({ type: 'CONNECT_FAILED' })
+      //   })
+      connect(selected.id)
+        .then(() => { selectDispatch({ type: 'CONNECTED' }) })
+        .catch(e => { selectDispatch({ type: 'CONNECT_FAILED' }) })
+    } else if (selected?.connect === 'DISCONNECTING') {
+      BleClient.disconnect(selected.id)
+        .then(() => {})
+        .catch(e => {})
+        .finally(() => {
+          selectDispatch({ type: 'DISCONNECTED' })
+        })
+    }
+  }, [selected])
+
+  const connectedId = scanState.devices.find(x => x.id === selected?.id && selected.connect === 'CONNECTED')?.id
+  useEffect(() => {
+    if (connectedId !== undefined) {
+      timer = setInterval(() => {
+        BleClient.readRssi(connectedId)
+          .then(rssi => {
+            dispatch({ type: 'RESULT', id: connectedId, name: 'HowlandStim', rssi })
+          })
+          .catch(e => {})
+      }, 2000)
+      return () => {
+        clearInterval(timer)
+      }
+    }
+  }, [connectedId])
 
   return (
     <IonPage id='devices-page'>
@@ -111,28 +224,62 @@ const Devices: React.FC<DevicesProps> = ({ select }) => {
         </IonToolbar>
       </IonHeader>
       <IonContent>
+
         <IonList>
           { scanState.devices.map(({ id, name, rssi }) => {
-            return (
-              <IonItem key={id} onClick={() => {
-                // BleClient.connect(id, onDisconnect)
-                //   .then(() => {
-                //     console.log(`${id} connected`)
-                //   })
-                //   .catch(e => {
-                //     console.log(`failed to connect to ${id}`)
-                //   })
-              }}>
-                <IonLabel>
-                  <h2 color='primary'>{name ?? '(noname)'}</h2>
-                  <p>{id}</p>
-                  <p>{`${rssi} dB`}</p>
-                </IonLabel>
-                {(!!select && select.id === id) && <IonBadge>HELLO</IonBadge>}
-              </IonItem>
-            )
-          })
-          }
+            if (name === 'HowlandStim') {
+              return (
+                <IonItem
+                  key={`ble-scan-dev-${id}`}
+                  button
+                  onClick={() => {
+                    console.log('selected', selected)
+                    if (selected === null || selected.connect === 'DISCONNECTED') {
+                      selectDispatch({ type: 'CONNECT', id })
+                    } else if (selected.connect === 'CONNECTED') {
+                      presentAlert({
+                        header: 'Disconnect the device?',
+                        buttons: [{
+                          text: 'CANCEL',
+                          role: 'CANCEL'
+                        }, {
+                          text: 'YES',
+                          role: 'YES'
+                        }],
+                        onDidDismiss: (e) => {
+                          const { role } = e.detail
+                          if (role === 'YES') {
+                            selectDispatch({ type: 'DISCONNECT' })
+                          }
+                        }
+                      }).then(() => {})
+                        .catch(e => {})
+                    }
+                  }} >
+                  <IonLabel color='secondary'>
+                    <h1>{name ?? '(noname)'}</h1>
+                    <p>{id}</p>
+                    <p>{`${rssi ?? '??'} dB`}</p>
+                  </IonLabel>
+                  { selected?.id === id && (
+                    <IonBadge color='success'>
+                      { selected.connect }
+                    </IonBadge>
+                  )}
+                </IonItem>
+              )
+            } else {
+              return (
+                <IonItem key={`ble-scan-dev-${id}`}>
+                  <IonLabel color='medium'>
+                    <h1>{name ?? '(noname)'}</h1>
+                    <p>{id}</p>
+                    <p>{`${rssi} dB`}</p>
+                  </IonLabel>
+                </IonItem>
+              )
+            }
+          }) }
         </IonList>
       </IonContent>
     </IonPage>

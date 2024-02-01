@@ -17,9 +17,17 @@ export interface ScannedDevice {
 export type SelectedDevice =
   | null
   | { id: string, connect: 'CONNECTING' }
-  | { id: string, connect: 'CONNECTED', services: string[] }
+  | { id: string, connect: 'CONNECT_FAILED' }
+  | { id: string, connect: 'CONNECTED' }
   | { id: string, connect: 'DISCONNECTING' }
   | { id: string, connect: 'DISCONNECTED' }
+
+export type SelectAction =
+  | { type: 'CONNECT', id: string }
+  | { type: 'CONNECT_FAILED' }
+  | { type: 'CONNECTED' }
+  | { type: 'DISCONNECT' }
+  | { type: 'DISCONNECTED' }
 
 export type AppAction =
   | { type: 'START_SCAN' }

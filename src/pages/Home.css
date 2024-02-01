@@ -1,11 +1,6 @@
 
-.ion-input-us::after {
-  content: "us";
-  padding-left: 0.5em;
-}
-
 ion-input.timing > label > div.native-wrapper::after{
-  content: "us";
+  content: "μs";
   padding-left: 0.5em;
 }
 
