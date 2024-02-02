@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react'
 
 import {
   type IonInputCustomEvent, type InputChangeEventDetail,
-  type IonSelectCustomEvent, type SelectChangeEventDetail
+  type IonSelectCustomEvent, type SelectChangeEventDetail,
+  type Color
 } from '@ionic/core'
 
 import {
@@ -121,6 +122,10 @@ const Home: React.FunctionComponent<HomeProps> = ({
 
   const currentSumNonZero = (): boolean => {
     return currents.reduce((acc, x) => (acc + x), 0) !== 0
+  }
+
+  const currentDividerColor = (): (Color & string) | undefined => {
+    
   }
 
   return (
