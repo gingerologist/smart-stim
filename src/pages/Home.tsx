@@ -1,4 +1,3 @@
-import type { Dispatch, FunctionComponent } from 'react'
 import React, { useEffect, useState } from 'react'
 
 import {
@@ -14,9 +13,9 @@ import {
   useIonAlert, IonLoading
 } from '@ionic/react'
 
-import { play, bluetooth, bluetoothOutline, settingsOutline } from 'ionicons/icons'
+import { bluetooth, bluetoothOutline, settingsOutline, pencil, pencilOutline, eyedrop } from 'ionicons/icons'
 
-import type { SelectedDevice, SelectAction, DeviceConfig } from '../types/appTypes'
+import type { SelectedDevice, DeviceConfig } from '../types/appTypes'
 
 // import Devices from '../components/Devices'
 import './Home.css'
@@ -25,21 +24,21 @@ const electrodeLabels = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
 const electrodeAmps = [15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, -1, -2, -3, -4, -5, -6, -7, -8, -9, -10, -11, -12, -13, -14, -15]
 
 interface HomeProps {
-  testMode: boolean
+  allowZeroPulse: boolean
   selected: SelectedDevice
   config?: DeviceConfig
 
   disconnect: () => void
-  setTestMode: (mode: boolean) => void
+  setAllowZeroPulse: (mode: boolean) => void
   updateConfig: (config: DeviceConfig) => void
 }
 
-const Home: FunctionComponent<HomeProps> = ({
-  testMode, selected, config,
-  disconnect, setTestMode, updateConfig
+const Home: React.FunctionComponent<HomeProps> = ({
+  allowZeroPulse, selected, config,
+  disconnect, setAllowZeroPulse, updateConfig
 }) => {
-  const [stimCurrent, setStimCurrent] = useState<number[]>([0, 0, 0, 0, 0, 0, 0, 0])
-  const [testCurrent, setTestCurrent] = useState<number[]>([0, 0, 0, 0, 0, 0, 0, 0])
+  const [currents, setCurrents] = useState<number[]>([0, 0, 0, 0, 0, 0, 0, 0])
+  const [numOfPulses, setNumOfPulses] = useState<number>(1)
   const [pulseWidth, setPulseWidth] = useState<string>('50')
   const [pulseRecycleRatio, setPulseRecycleRatio] = useState<number>(4)
 
@@ -47,23 +46,28 @@ const Home: FunctionComponent<HomeProps> = ({
 
   const connected = selected !== null && selected.connect === 'CONNECTED'
 
-  useEffect(() => {
-    if (config === undefined) return
+  const loadConfig = (config: DeviceConfig): void => {
     if (config.numOfPulses === 0) {
-      setTestMode(true)
-    } else {
-      setTestMode(false)
-      setStimCurrent([...config.current])
-      setPulseWidth(config.pulseWidth.toString())
-
-      let ratio = Math.round(config.recycle / config.pulseWidth)
-      if (ratio < 2) {
-        ratio = 2
-      } else if (ratio > 10) {
-        ratio = 10
-      }
-      setPulseRecycleRatio(ratio)
+      setAllowZeroPulse(true)
     }
+
+    setNumOfPulses(config.numOfPulses)
+    setCurrents([...config.current])
+    setPulseWidth(config.pulseWidth.toString())
+
+    let ratio = Math.round(config.recycle / config.pulseWidth)
+    if (ratio < 2) {
+      ratio = 2
+    } else if (ratio > 10) {
+      ratio = 10
+    }
+
+    setPulseRecycleRatio(ratio)
+  }
+
+  // config only changed from device, 'unidirectional data flow'
+  useEffect(() => {
+    if (config !== undefined) loadConfig(config)
   }, [config])
 
   const presentDisconnectAlert = (): void => {
@@ -87,57 +91,83 @@ const Home: FunctionComponent<HomeProps> = ({
       .catch(e => {})
   }
 
+  const numOfPulsesOptions = allowZeroPulse ? [0, 1] : [1]
+
+  const isDirty = (): boolean => {
+    if (selected === null) return false
+    if (selected.connect !== 'CONNECTED') return false
+
+    // const { config } = selected
+    if (config === undefined) return false
+
+    if (!currents.every((c, i) => c === config.current[i])) return true
+    if (numOfPulses !== config.numOfPulses) return true
+
+    if (numOfPulses === 0) {
+      return false
+    }
+
+    if (parseInt(pulseWidth) !== config.pulseWidth) return true
+    if (parseInt(pulseWidth) * pulseRecycleRatio !== config.recycle) return true
+
+    return false
+  }
+
+  const dirty = isDirty()
+
+  const currentAllZero = (): boolean => {
+    return currents.every(x => x === 0)
+  }
+
+  const currentSumNonZero = (): boolean => {
+    return currents.reduce((acc, x) => (acc + x), 0) !== 0
+  }
+
   return (
     <IonPage>
       <IonHeader>
-        <IonToolbar color={ testMode ? 'dark' : 'light'}>
-          <IonTitle>{testMode ? 'Testing' : 'Stimulation'}</IonTitle>
+        <IonToolbar>
+          <IonTitle>Howland Stim</IonTitle>
           <IonButtons slot='end'>
-            { (selected === null || selected.connect === 'DISCONNECTED') && //
-              <IonButton routerLink='/devices' routerDirection='forward'>
-                <IonIcon slot="icon-only" icon={bluetoothOutline}></IonIcon>
-              </IonButton> }
-            { (selected !== null && selected.connect === 'CONNECTED') &&
-              <IonButton shape='round' color='primary' fill='solid' onClick={presentDisconnectAlert}>
-                <IonIcon slot="icon-only" icon={bluetooth}></IonIcon>
-              </IonButton> }
-            <IonButton routerLink='/settings' routerDirection='forward'>
+            { (selected === null || selected.connect === 'DISCONNECTED') &&
+            <IonButton routerLink='/devices' routerDirection='forward'>
+              {/* <IonIcon slot="start" icon={bluetoothOutline}></IonIcon> */}
+              SCAN
+            </IonButton> }
+            { (selected !== null && selected.connect === 'CONNECTED' && !dirty) &&
+            <IonButton color='primary' onClick={presentDisconnectAlert}>
+              {/* <IonIcon icon={bluetooth}></IonIcon> */}
+              {selected.id.slice(-8)}
+            </IonButton> }
+
+            { (selected !== null && selected.connect === 'CONNECTED' && dirty) &&
+            <IonButton onClick={() => {
+              if (config !== undefined) loadConfig(config)
+            }}>DISCARD</IonButton> }
+
+            { (selected !== null && selected.connect === 'CONNECTED' && dirty) &&
+            <IonButton>COMMIT</IonButton> }
+
+            {/* <IonButton routerLink='/settings' routerDirection='forward'>
               <IonIcon slot='icon-only' icon={settingsOutline}></IonIcon>
-            </IonButton>
+            </IonButton> */}
           </IonButtons>
         </IonToolbar>
       </IonHeader>
       <IonContent className='ion-no-padding'>
         <IonLoading message='CONNECTING...' isOpen={selected?.connect === 'CONNECTING'} />
-        { testMode &&
-        <IonList>
-          { electrodeLabels.map((label, index) => (
-          <IonItem key={`test-current-${label}`}>
-            <IonSelect
-              label={label}
-              value={testCurrent[index]}
-              interface='popover'
-              onIonChange={(e: IonSelectCustomEvent<SelectChangeEventDetail<number>>) => {
-                setTestCurrent([...testCurrent.slice(0, index), e.detail.value, ...testCurrent.slice(index + 1)])
-              }}>
-              { electrodeAmps.map(num => <IonSelectOption key={`test-current-${label}-opt-${num}`} value={num}>{`${num} mA`}</IonSelectOption>) }
-            </IonSelect>
-          </IonItem>
-          ))}
-        </IonList>}
-
-        { !testMode &&
         <IonList aria-disabled={!connected}>
           {/* current settings */}
-          <IonItemDivider>Current</IonItemDivider>
+          <IonItemDivider color={(currentSumNonZero() || currentAllZero()) ? 'danger' : undefined}>Current</IonItemDivider>
+
           { electrodeLabels.map((label, index) => (
           <IonItem key={`electrode-${label}`}>
             <IonSelect
               label={label}
-              value={stimCurrent[index]}
+              value={currents[index]}
               interface='popover'
               onIonChange={(e: IonSelectCustomEvent<SelectChangeEventDetail<number>>) => {
-                setStimCurrent([...stimCurrent.slice(0, index), e.detail.value, ...stimCurrent.slice(index + 1)])
+                setCurrents([...currents.slice(0, index), e.detail.value, ...currents.slice(index + 1)])
               }}
               disabled={!connected}
             >
@@ -149,12 +179,16 @@ const Home: FunctionComponent<HomeProps> = ({
           <IonItemDivider>Timing</IonItemDivider>
 
           <IonItem key='timing-num-of-pulses' disabled={!connected}>
-            <IonSelect label='Pulses per Cycle' interface='popover'>
-              { [0, 1].map(num => <IonSelectOption key={`num-of-pulses-option-${num}`} value={num}>{num}</IonSelectOption>) }
+            <IonSelect label='Pulses per Cycle' class='timing' value={numOfPulses} interface='popover'
+              onIonChange={(e: IonSelectCustomEvent<SelectChangeEventDetail<number>>) => {
+                setNumOfPulses(e.detail.value)
+              }}>
+              { numOfPulsesOptions.map(num => <IonSelectOption key={`num-of-pulses-option-${num}`} value={num}>{num}</IonSelectOption>) }
             </IonSelect>
           </IonItem>
 
-          <IonItem key='timing-pulse-width' disabled={!connected}>
+          {/*  */}
+          <IonItem key='timing-pulse-width' disabled={!connected || numOfPulses === 0} color={(connected && numOfPulses > 0 && !isNaN(parseInt(pulseWidth)) && config !== undefined && parseInt(pulseWidth) !== config.pulseWidth) ? 'warning' : undefined}>
             <IonInput
               label='Pulse Width' class='timing' style={{ textAlign: 'right' }} inputMode='decimal' value={pulseWidth}
               onIonInput={({ detail: { value } }: IonInputCustomEvent<InputChangeEventDetail>) => {
@@ -171,7 +205,7 @@ const Home: FunctionComponent<HomeProps> = ({
               }} />
           </IonItem>
 
-          <IonItem key='timing-pulse-recycle-ratio' disabled={!connected}>
+          <IonItem key='timing-pulse-recycle-ratio' disabled={!connected || numOfPulses === 0}>
             <IonSelect label='Pulse/Recycle Ratio' class='timing' value={pulseRecycleRatio} interface='popover'
               onIonChange={(e: IonSelectCustomEvent<SelectChangeEventDetail<number>>) => {
                 setPulseRecycleRatio(e.detail.value)
@@ -180,77 +214,26 @@ const Home: FunctionComponent<HomeProps> = ({
               { [2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => <IonSelectOption key={`pulse-recycle-ratio-option-${num}`} value={num}>{`1 : ${num}`}</IonSelectOption>) }
             </IonSelect>
           </IonItem>
-          {/* timingLabels.map((label, index) => (
-          <IonItem key={`timing-${label}`}>
-            <IonInput
-              label={label.slice(0, 1).toUpperCase() + label.slice(1)}
-              class='timing'
-              style={{ textAlign: 'right' }}
-              inputMode='decimal'
-              value={timingConfig[index]}
-              disabled={index === 1 && numOfPulses === 1}
-              onIonInput={(e: IonInputCustomEvent<InputChangeEventDetail>) => {
-                let update
-                const str = e.detail.value
-                if (typeof str !== 'string') return
-                if (str.length === 0) {
-                  update = [...timingConfig.slice(0, index), null, ...timingConfig.slice(index + 1)]
-                } else {
-                  const num = parseInt(str)
-                  if (!Number.isInteger(num) || num < 0 || num.toString() !== str) {
-                    update = [...timingConfig]
-                  } else {
-                    update = [...timingConfig.slice(0, index), num, ...timingConfig.slice(index + 1)]
-                  }
-                }
-                setTimingConfig(update)
-              }}
-            />
-          </IonItem>
-            )) */}
-          <IonItem disabled={!connected}>
+
+          <IonItem disabled={!connected || numOfPulses === 0}>
             <IonLabel>Period</IonLabel>
             <IonLabel slot='end' style={{ textAlign: 'right' }}>
               {pulseWidth === '' ? '--' : parseInt(pulseWidth) * (pulseRecycleRatio + 1) } μs
             </IonLabel>
           </IonItem>
-          <IonItem disabled={!connected}>
+          <IonItem disabled={!connected || numOfPulses === 0}>
             <IonLabel>Frequency</IonLabel>
             <IonLabel slot='end' style={{ textAlign: 'right' }}>{pulseWidth === '' ? '--' : (1000000 / (parseInt(pulseWidth) * (pulseRecycleRatio + 1))).toFixed(2) } Hz</IonLabel>
           </IonItem>
-        </IonList> }
+        </IonList>
       </IonContent>
 
-      <IonFooter className='ion-no-border' style={{ height: 64 }}>
-        {/* <IonFab horizontal='center' vertical='top' edge={true}>
-          <IonFabButton disabled={!pulseWidthOK || !currentOK}>
-            SEND
-          </IonFabButton>
-        </IonFab> */}
-        {/* <IonProgressBar type='indeterminate'></IonProgressBar> */}
-        <IonToolbar>
-          {/* <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}> */}
-          <IonButtons slot='end'>
-            <IonButton onClick={(): void => {
-              const config = {
-                timeout: 0,
-                numOfPulses: 1,
-                pulseWidth: parseInt(pulseWidth),
-                pulseInterval: 0,
-                mid: 0,
-                recycle: parseInt(pulseWidth) * pulseRecycleRatio,
-                tail: 0,
-                current: stimCurrent
-              }
-              updateConfig(config)
-            }}>START</IonButton>
-            <IonButton>
-              STOP
-            </IonButton>
-            <IonButton>
-              DISCARD C
-            </IonButton>
-          </IonButtons>
+      <IonFooter>
+        <IonToolbar class='ion-padding'>
+          <IonLabel>
+            <h2>hello</h2>
+            <p>something important</p>
+          </IonLabel>
         </IonToolbar>
       </IonFooter>
     </IonPage>

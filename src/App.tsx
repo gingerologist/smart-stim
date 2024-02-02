@@ -100,7 +100,7 @@ const BLE_NUS_TXD_UUID = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'
 
 const App: React.FC = () => {
   const [selected, dispatch] = useReducer(reducer, null)
-  const [testMode, setTestMode] = useState<boolean>(false)
+  const [allowZeroPulse, setAllowZeroPulse] = useState<boolean>(true)
   const [config, setConfig] = useState<DeviceConfig>()
 
   const onDisconnect = (id: string): void => {
@@ -229,11 +229,11 @@ const App: React.FC = () => {
           <IonLoading message='connecting' isOpen={selected?.connect === 'CONNECTING'} />
           <Route exact path='/home'>
             <Home
-              testMode={testMode}
+              allowZeroPulse={allowZeroPulse}
               selected={selected}
               config={config}
               disconnect={disconnect}
-              setTestMode={(mode: boolean) => { setTestMode(mode) }}
+              setAllowZeroPulse={(mode: boolean) => { setAllowZeroPulse(mode) }}
               updateConfig={updateConfig}
             />
           </Route>
@@ -241,7 +241,7 @@ const App: React.FC = () => {
             <Devices selected={selected} selectDispatch={dispatch} select={onDeviceSelect} />
           </Route>
           <Route exact path='/settings'>
-            <Settings testMode={testMode} setTestMode={(mode: boolean) => { setTestMode(mode) }}/>
+            <Settings allowZeroPulse={allowZeroPulse} setAllowZeroPulse={(mode: boolean) => { setAllowZeroPulse(mode) }}/>
           </Route>
           <Route exact path='/'>
             <Redirect to='/home' />

@@ -2,7 +2,7 @@ import React from 'react'
 
 import {
   IonPage, IonToolbar, IonButtons, IonBackButton, IonHeader,
-  IonContent, IonList, IonItem, IonLabel, IonTitle, IonToggle
+  IonContent, IonList, IonItem, IonLabel, IonTitle, IonToggle, IonNote
 } from '@ionic/react'
 
 import {
@@ -13,11 +13,11 @@ import {
 // import './Settings.css'
 
 interface SettingsProp {
-  testMode: boolean
-  setTestMode: (mode: boolean) => void
+  allowZeroPulse: boolean
+  setAllowZeroPulse: (mode: boolean) => void
 }
 
-const Settings: React.FunctionComponent<SettingsProp> = ({ testMode, setTestMode }) => {
+const Settings: React.FunctionComponent<SettingsProp> = ({ allowZeroPulse, setAllowZeroPulse }) => {
   return (
     <IonPage id='settings-page'>
       <IonHeader>
@@ -33,11 +33,16 @@ const Settings: React.FunctionComponent<SettingsProp> = ({ testMode, setTestMode
           <IonItem>
             <IonToggle
               justify='space-between'
-              checked={testMode}
+              checked={allowZeroPulse}
               onIonChange={(e: IonToggleCustomEvent<ToggleChangeEventDetail>) => {
-                setTestMode(e.detail.checked)
-                console.log(e.detail.checked)
-              }}>Enable Testing Mode</IonToggle>
+                setAllowZeroPulse(e.detail.checked)
+            }}>
+              <IonLabel>
+                <h2>Allow zero pulses per cycle</h2>
+                <p>静态输出电流，无波形，仅用于测试。</p>
+              </IonLabel>
+            </IonToggle>
+
           </IonItem>
         </IonList>
       </IonContent>
