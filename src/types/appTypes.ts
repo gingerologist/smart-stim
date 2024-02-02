@@ -14,13 +14,24 @@ export interface ScannedDevice {
   rssi?: number
 }
 
+export interface DeviceConfig {
+  timeout: number
+  numOfPulses: number
+  pulseWidth: number
+  pulseInterval: number
+  mid: number
+  recycle: number
+  tail: number
+  current: number[]
+}
+
 export type SelectedDevice =
   | null
   | { id: string, connect: 'CONNECTING' }
-  | { id: string, connect: 'CONNECT_FAILED' }
-  | { id: string, connect: 'CONNECTED' }
-  | { id: string, connect: 'DISCONNECTING' }
-  | { id: string, connect: 'DISCONNECTED' }
+  //  | { id: string, connect: 'CONNECT_FAILED' }
+  | { id: string, connect: 'CONNECTED', config?: DeviceConfig }
+  | { id: string, connect: 'DISCONNECTING', config?: DeviceConfig }
+  | { id: string, connect: 'DISCONNECTED', config?: DeviceConfig }
 
 export type SelectAction =
   | { type: 'CONNECT', id: string }
@@ -28,6 +39,7 @@ export type SelectAction =
   | { type: 'CONNECTED' }
   | { type: 'DISCONNECT' }
   | { type: 'DISCONNECTED' }
+  | { type: 'CONFIG_UPDATE', config: DeviceConfig }
 
 export type AppAction =
   | { type: 'START_SCAN' }
